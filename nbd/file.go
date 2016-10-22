@@ -1,8 +1,10 @@
 package nbd
 
 import (
-	"golang.org/x/net/context"
 	"os"
+	"strconv"
+
+	"golang.org/x/net/context"
 )
 
 // FileBackend implements Backend
@@ -74,14 +76,25 @@ func NewFileBackend(ctx context.Context, ec *ExportConfig) (Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	stat, err := file.Stat()
-	if err != nil {
-		file.Close()
-		return nil, err
+
+	var size uint64
+	if ec.DriverParameters["size"] != "" {
+		size, err = strconv.ParseUint(ec.DriverParameters["size"], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		stat, err := file.Stat()
+		if err != nil {
+			file.Close()
+			return nil, err
+		}
+		size = uint64(stat.Size())
 	}
+
 	return &FileBackend{
 		file: file,
-		size: uint64(stat.Size()),
+		size: size,
 	}, nil
 }
 
